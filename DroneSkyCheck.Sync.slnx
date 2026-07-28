@@ -1,3 +1,6 @@
 <Solution>
+  <Project Path="DroneSkyCheck.Sync.Common/DroneSkyCheck.Sync.Common.csproj" />
+  <Project Path="DroneSkyCheck.Sync.Core/DroneSkyCheck.Sync.Core.csproj" />
+  <Project Path="DroneSkyCheck.Sync.Models/DroneSkyCheck.Sync.Models.csproj" />
   <Project Path="DroneSkyCheck.Sync/DroneSkyCheck.Sync.csproj" />
 </Solution>

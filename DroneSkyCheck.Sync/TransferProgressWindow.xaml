@@ -1,0 +1,148 @@
+<Window x:Class="DroneSkyCheck.Sync.TransferProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Trasferimento a DSC"
+        Width="860"
+        Height="560"
+        MinWidth="760"
+        MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="#F4F6F8"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="DscBlueBrush" Color="#0067B1"/>
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#18222B"/>
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#64717D"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#DDE3E8"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#198754"/>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="Background" Value="{StaticResource DscBlueBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource PrimaryButtonStyle}">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="{StaticResource DscBlueBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource DscBlueBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock
+                Text="Trasferimento Flight Log"
+                FontSize="22"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource PrimaryTextBrush}"/>
+
+            <TextBlock
+                x:Name="SummaryText"
+                Margin="0,5,0,0"
+                Text="Preparazione trasferimento..."
+                FontSize="13"
+                Foreground="{StaticResource SecondaryTextBrush}"/>
+        </StackPanel>
+
+        <ProgressBar
+            Grid.Row="1"
+            x:Name="TransferProgressBar"
+            Margin="0,16,0,14"
+            Height="12"
+            Minimum="0"
+            Maximum="1"
+            Value="0"/>
+
+        <Border
+            Grid.Row="2"
+            Background="White"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12">
+
+            <ListView
+                x:Name="EntriesList"
+                ItemsSource="{Binding Entries}"
+                BorderThickness="0">
+
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="#" Width="44" DisplayMemberBinding="{Binding Number}"/>
+                        <GridViewColumn Header="File" Width="270" DisplayMemberBinding="{Binding FileName}"/>
+                        <GridViewColumn Header="Stato" Width="130" DisplayMemberBinding="{Binding Status}"/>
+                        <GridViewColumn Header="Dettaglio" Width="330" DisplayMemberBinding="{Binding Detail}"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </Border>
+
+        <Grid Grid.Row="3" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock
+                x:Name="FooterText"
+                VerticalAlignment="Center"
+                Text="Il report sara disponibile al termine."
+                FontSize="12"
+                Foreground="{StaticResource SecondaryTextBrush}"/>
+
+            <Button
+                Grid.Column="1"
+                x:Name="StopTransferButton"
+                Content="Interrompi"
+                IsEnabled="False"
+                Style="{StaticResource SecondaryButtonStyle}"
+                Click="StopTransferButton_Click"/>
+
+            <Button
+                Grid.Column="3"
+                x:Name="CopyReportButton"
+                Content="Copia report"
+                IsEnabled="False"
+                Style="{StaticResource SecondaryButtonStyle}"
+                Click="CopyReportButton_Click"/>
+
+            <Button
+                Grid.Column="5"
+                x:Name="SaveReportButton"
+                Content="Salva report"
+                IsEnabled="False"
+                Style="{StaticResource SecondaryButtonStyle}"
+                Click="SaveReportButton_Click"/>
+
+            <Button
+                Grid.Column="7"
+                x:Name="CloseButton"
+                Content="Chiudi"
+                IsEnabled="False"
+                Style="{StaticResource PrimaryButtonStyle}"
+                Click="CloseButton_Click"/>
+        </Grid>
+    </Grid>
+</Window>

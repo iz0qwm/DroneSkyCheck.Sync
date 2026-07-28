@@ -8,4 +8,20 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Resources\dsc_logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DroneSkyCheck.Sync.Common\DroneSkyCheck.Sync.Common.csproj" />
+    <ProjectReference Include="..\DroneSkyCheck.Sync.Core\DroneSkyCheck.Sync.Core.csproj" />
+    <ProjectReference Include="..\DroneSkyCheck.Sync.Models\DroneSkyCheck.Sync.Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\dsc_logo.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
 </Project>

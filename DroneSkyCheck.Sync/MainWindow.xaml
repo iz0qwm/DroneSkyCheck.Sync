@@ -3,10 +3,690 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:DroneSkyCheck.Sync"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Drone Sky Check Sync"
+        Width="1120"
+        Height="720"
+        MinWidth="920"
+        MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Background="#F4F6F8"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+
+        <!-- Colori DSC -->
+
+        <SolidColorBrush x:Key="DscBlueBrush" Color="#0067B1"/>
+        <SolidColorBrush x:Key="DscDarkBlueBrush" Color="#003B65"/>
+        <SolidColorBrush x:Key="DscLightBlueBrush" Color="#E8F3FA"/>
+        <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F4F6F8"/>
+        <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#18222B"/>
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#64717D"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#DDE3E8"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#198754"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#C47A00"/>
+
+        <!-- Pulsante principale -->
+
+        <Style x:Key="PrimaryButtonStyle"
+               TargetType="Button">
+
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="Padding" Value="22,0"/>
+            <Setter Property="Background" Value="{StaticResource DscBlueBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6">
+
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder"
+                                        Property="Opacity"
+                                        Value="0.88"/>
+                            </Trigger>
+
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder"
+                                        Property="Opacity"
+                                        Value="0.72"/>
+                            </Trigger>
+
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder"
+                                        Property="Background"
+                                        Value="#C9D0D6"/>
+                                <Setter Property="Foreground"
+                                        Value="#7D8790"/>
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
+        </Style>
+
+        <!-- Pulsante secondario -->
+
+        <Style x:Key="SecondaryButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource PrimaryButtonStyle}">
+
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="{StaticResource DscBlueBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource DscBlueBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder"
+                                        Property="Background"
+                                        Value="{StaticResource DscLightBlueBrush}"/>
+                            </Trigger>
+
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder"
+                                        Property="Opacity"
+                                        Value="0.75"/>
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
+        </Style>
+
+        <!-- Card -->
+
+        <Style x:Key="CardStyle"
+               TargetType="Border">
+
+            <Setter Property="Background"
+                    Value="{StaticResource CardBackgroundBrush}"/>
+
+            <Setter Property="BorderBrush"
+                    Value="{StaticResource BorderBrush}"/>
+
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+
+            <Setter Property="CornerRadius"
+                    Value="10"/>
+
+            <Setter Property="Padding"
+                    Value="20"/>
+
+        </Style>
+
+        <!-- Elementi lista -->
+
+        <Style TargetType="ListBoxItem">
+
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="BorderThickness" Value="0"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+
+                        <Border x:Name="ItemBorder"
+                                Background="Transparent"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+
+                            <ContentPresenter/>
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder"
+                                        Property="Background"
+                                        Value="#F0F6FA"/>
+                            </Trigger>
+
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder"
+                                        Property="Background"
+                                        Value="{StaticResource DscLightBlueBrush}"/>
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
+        </Style>
+
+        <Style TargetType="ListViewItem"
+               BasedOn="{StaticResource {x:Type ListBoxItem}}"/>
+
+    </Window.Resources>
+
     <Grid>
 
+        <Grid.RowDefinitions>
+            <RowDefinition Height="76"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="34"/>
+        </Grid.RowDefinitions>
+
+        <!-- Barra superiore DSC -->
+
+        <Border Grid.Row="0"
+                Background="White"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+
+            <Grid Margin="28,0">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Branding -->
+
+                <StackPanel Orientation="Horizontal">
+
+                   <Image
+                    Width="185"
+                    Height="52"
+                    Source="Resources/dsc_logo.png"/>
+
+                </StackPanel>
+
+                <!-- Stato Account Cloud -->
+
+                <Border Grid.Column="1"
+                        Padding="14,8"
+                        Background="#F7F9FA"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        VerticalAlignment="Center">
+
+                    <StackPanel Orientation="Horizontal">
+
+                        <Ellipse
+                            x:Name="CloudStatusIndicator"
+                            Width="10"
+                            Height="10"
+                            Margin="0,0,10,0"
+                            Fill="#9AA4AD"
+                            VerticalAlignment="Center"/>
+
+                        <StackPanel>
+
+                            <TextBlock
+                                x:Name="CloudStatusText"
+                                Text="Non connesso"
+                                FontSize="13"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                            <TextBlock
+                                x:Name="CloudAccountText"
+                                Text="Account Cloud DSC"
+                                FontSize="11"
+                                Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        </StackPanel>
+
+                        <Button
+                            x:Name="CloudAccountButton"
+                            Margin="18,0,0,0"
+                            Height="32"
+                            Padding="14,0"
+                            Content="Accedi"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Click="CloudAccountButton_Click"/>
+
+                    </StackPanel>
+
+                </Border>
+
+            </Grid>
+
+        </Border>
+
+        <!-- Contenuto -->
+
+        <Grid Grid.Row="1"
+              Margin="28,24">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="18"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Titolo pagina -->
+
+            <Grid Grid.Row="0">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+
+                    <TextBlock
+                        Text="Sincronizzazione Flight Log"
+                        FontSize="27"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                    <TextBlock
+                        Margin="0,5,0,0"
+                        Text="Importa in modo sicuro i Flight Log DJI nel tuo account Drone Sky Check."
+                        FontSize="14"
+                        Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                </StackPanel>
+
+                <Button
+                    Grid.Column="1"
+                    x:Name="RefreshDevicesButton"
+                    Width="150"
+                    Content="Aggiorna dispositivi"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Click="RefreshDevicesButton_Click"/>
+
+            </Grid>
+
+            <!-- Area di lavoro -->
+
+            <Grid Grid.Row="2">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="330"/>
+                    <ColumnDefinition Width="18"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Origini -->
+
+                <Border Grid.Column="0"
+                        Style="{StaticResource CardStyle}">
+
+                    <Grid>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock
+                            Text="Origini Flight Log"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                        <TextBlock
+                            Grid.Row="1"
+                            Margin="0,5,0,15"
+                            Text="Smartphone, radiocomandi DJI e cartelle locali."
+                            TextWrapping="Wrap"
+                            FontSize="12"
+                            Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <ListBox
+                            x:Name="DevicesList"
+                            Grid.Row="2"
+                            BorderThickness="0"
+                            Background="Transparent"
+                            SelectionChanged="DevicesList_SelectionChanged">
+
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+
+                                    <Grid>
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="42"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Width="34"
+                                                Height="34"
+                                                Background="#EDF3F7"
+                                                CornerRadius="17">
+
+                                            <TextBlock
+                                                Text="&#xE8B7;"
+                                                FontFamily="Segoe MDL2 Assets"
+                                                FontSize="16"
+                                                Foreground="{StaticResource DscBlueBrush}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+
+                                        </Border>
+
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            Margin="10,0,0,0"
+                                            VerticalAlignment="Center">
+
+                                            <TextBlock
+                                                Text="{Binding Name}"
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                Foreground="{StaticResource PrimaryTextBrush}"
+                                                TextTrimming="CharacterEllipsis"/>
+
+                                            <TextBlock
+                                                Text="Origine disponibile"
+                                                FontSize="11"
+                                                Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                        </StackPanel>
+
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Text="&#xE76C;"
+                                            FontFamily="Segoe MDL2 Assets"
+                                            Foreground="#84919B"
+                                            VerticalAlignment="Center"/>
+
+                                    </Grid>
+
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+
+                        </ListBox>
+
+                    </Grid>
+
+                </Border>
+
+                <!-- Flight Log -->
+
+                <Border Grid.Column="2"
+                        Style="{StaticResource CardStyle}">
+
+                    <Grid>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock
+                            Text="Flight Log disponibili"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                        <TextBlock
+                            x:Name="SelectedSourceText"
+                            Grid.Row="1"
+                            Margin="0,5,0,15"
+                            Text="Seleziona un dispositivo per cercare i Flight Log."
+                            FontSize="12"
+                            Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <!-- Lista log -->
+
+                        <ListView
+                            x:Name="FlightLogsList"
+                            Grid.Row="2"
+                            BorderThickness="0"
+                            Background="Transparent"
+                            SelectionMode="Extended"
+                            SelectionChanged="FlightLogsList_SelectionChanged">
+
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+
+                                    <Grid Margin="0,4">
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="42"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Width="34"
+                                                Height="34"
+                                                Background="#F3F5F6"
+                                                CornerRadius="6">
+
+                                            <TextBlock
+                                                Text="&#xE8A5;"
+                                                FontFamily="Segoe MDL2 Assets"
+                                                FontSize="16"
+                                                Foreground="{StaticResource DscBlueBrush}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+
+                                        </Border>
+
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            Margin="10,0,0,0"
+                                            VerticalAlignment="Center">
+
+                                            <TextBlock
+                                                Text="{Binding FileName}"
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                                            <TextBlock
+                                                Text="Pronto per la sincronizzazione"
+                                                FontSize="11"
+                                                Foreground="{StaticResource SuccessBrush}"/>
+
+                                        </StackPanel>
+
+                                        <Border
+                                            Grid.Column="2"
+                                            Padding="9,4"
+                                            Background="#EAF6EF"
+                                            CornerRadius="10"
+                                            VerticalAlignment="Center">
+
+                                            <TextBlock
+                                                Text="NUOVO"
+                                                FontSize="10"
+                                                FontWeight="Bold"
+                                                Foreground="{StaticResource SuccessBrush}"/>
+
+                                        </Border>
+
+                                    </Grid>
+
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+
+                        </ListView>
+
+                        <!-- Footer sincronizzazione -->
+
+                        <Border
+                            Grid.Row="3"
+                            Margin="0,16,0,0"
+                            Padding="0,16,0,0"
+                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="0,1,0,0">
+
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Statistiche -->
+
+                                <StackPanel Orientation="Horizontal">
+
+                                    <StackPanel Margin="0,0,30,0">
+
+                                        <TextBlock
+                                            x:Name="LogsFoundValueText"
+                                            Text="0"
+                                            FontSize="22"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                                        <TextBlock
+                                            Text="Log trovati"
+                                            FontSize="11"
+                                            Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                    </StackPanel>
+
+                                    <StackPanel Margin="0,0,30,0">
+
+                                        <TextBlock
+                                            x:Name="NewLogsValueText"
+                                            Text="0"
+                                            FontSize="22"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource SuccessBrush}"/>
+
+                                        <TextBlock
+                                            Text="Nuovi"
+                                            FontSize="11"
+                                            Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                    </StackPanel>
+
+                                    <StackPanel>
+
+                                        <TextBlock
+                                            x:Name="ImportedLogsValueText"
+                                            Text="0"
+                                            FontSize="22"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                        <TextBlock
+                                            Text="Sincronizzati"
+                                            FontSize="11"
+                                            Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                    </StackPanel>
+
+                                </StackPanel>
+
+                                <!-- Azione -->
+
+                                <StackPanel
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right">
+
+                                    <Button
+                                        x:Name="TransferButton"
+                                        Width="190"
+                                        Content="Trasferisci a DSC"
+                                        IsEnabled="False"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Click="TransferButton_Click"/>
+
+                                    <TextBlock
+                                        x:Name="TransferRequirementText"
+                                        Margin="0,6,0,0"
+                                        Text="È necessario un account DSC+."
+                                        FontSize="11"
+                                        TextAlignment="Center"
+                                        Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                </StackPanel>
+
+                            </Grid>
+
+                        </Border>
+
+                    </Grid>
+
+                </Border>
+
+            </Grid>
+
+        </Grid>
+
+        <!-- Barra di stato -->
+
+        <Border Grid.Row="2"
+                Background="#E9EDF0"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,1,0,0">
+
+            <Grid Margin="18,0">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock
+                    x:Name="StatusText"
+                    Text="Ricerca dispositivi..."
+                    FontSize="11"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    VerticalAlignment="Center"/>
+
+                <TextBlock
+                    Grid.Column="1"
+                    Text="DroneSkyCheck.Sync · DSC+"
+                    FontSize="11"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    VerticalAlignment="Center"/>
+
+            </Grid>
+
+        </Border>
+
     </Grid>
+
 </Window>

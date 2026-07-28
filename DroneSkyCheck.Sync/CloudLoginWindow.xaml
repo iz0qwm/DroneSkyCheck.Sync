@@ -1,0 +1,77 @@
+<Window x:Class="DroneSkyCheck.Sync.CloudLoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Account Cloud DSC"
+        Width="420"
+        Height="260"
+        MinWidth="420"
+        MinHeight="260"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#F4F6F8"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="DscBlueBrush" Color="#0067B1"/>
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#18222B"/>
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#64717D"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#DDE3E8"/>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Padding" Value="18,0"/>
+            <Setter Property="Background" Value="{StaticResource DscBlueBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="26"
+            Padding="22"
+            Background="White"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8">
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock
+                Text="Account Cloud DSC"
+                FontSize="22"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource PrimaryTextBrush}"/>
+
+            <TextBlock
+                Grid.Row="1"
+                Margin="0,6,0,18"
+                Text="Accedi dal portale Drone Sky Check con email/password o Google."
+                TextWrapping="Wrap"
+                FontSize="13"
+                Foreground="{StaticResource SecondaryTextBrush}"/>
+
+            <Button
+                Grid.Row="2"
+                x:Name="DscPortalLoginButton"
+                Content="Accedi con Drone Sky Check"
+                Style="{StaticResource PrimaryButtonStyle}"
+                Click="DscPortalLoginButton_Click"/>
+
+            <TextBlock
+                Grid.Row="3"
+                x:Name="StatusText"
+                Margin="0,18,0,0"
+                TextWrapping="Wrap"
+                FontSize="12"
+                Foreground="{StaticResource SecondaryTextBrush}"/>
+        </Grid>
+    </Border>
+</Window>
+
