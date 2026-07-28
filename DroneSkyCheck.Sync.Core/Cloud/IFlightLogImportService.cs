@@ -1,5 +1,18 @@
 namespace DroneSkyCheck.Sync.Core.Cloud;
 
+public sealed class DjiFlightLogRateLimitException : HttpRequestException
+{
+    public DjiFlightLogRateLimitException(
+        string message,
+        TimeSpan retryAfter)
+        : base(message)
+    {
+        RetryAfter = retryAfter;
+    }
+
+    public TimeSpan RetryAfter { get; }
+}
+
 public interface IFlightLogImportService
 {
     Task<DjiFlightLogImportCheckResult> CheckDjiFlightLogImportAsync(
@@ -9,6 +22,13 @@ public interface IFlightLogImportService
         string sha256,
         long sizeBytes,
         string filename,
+        CancellationToken cancellationToken = default);
+
+    Task<DjiFlightLogImportBatchCheckResult> CheckDjiFlightLogImportsAsync(
+        string idToken,
+        string operatorId,
+        string ownerUid,
+        IReadOnlyList<DjiFlightLogImportBatchCheckItem> items,
         CancellationToken cancellationToken = default);
 
     Task<DjiFlightLogImportResult> ImportDjiFlightLogAsync(
@@ -22,6 +42,19 @@ public interface IFlightLogImportService
 }
 
 public sealed record DjiFlightLogImportCheckResult(
+    bool AlreadyImported);
+
+public sealed record DjiFlightLogImportBatchCheckItem(
+    string Sha256,
+    long SizeBytes,
+    string Filename);
+
+public sealed record DjiFlightLogImportBatchCheckResult(
+    IReadOnlyList<DjiFlightLogImportBatchCheckResultItem> Results);
+
+public sealed record DjiFlightLogImportBatchCheckResultItem(
+    string Sha256,
+    string Filename,
     bool AlreadyImported);
 
 public sealed record DjiFlightLogImportResult(

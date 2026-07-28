@@ -467,6 +467,11 @@ public partial class MainWindow : Window
 
         try
         {
+            var preparedLogs =
+                new List<PreparedFlightLog>();
+
+            var processedCount = 0;
+
             for (var index = 0; index < transferLogs.Count; index++)
             {
                 if (progressWindow.IsStopRequested)
@@ -508,55 +513,207 @@ public partial class MainWindow : Window
                     progressWindow.UpdateEntry(
                         progressEntry,
                         "In corso",
-                        "Controllo cloud",
+                        "Pronto per controllo cloud",
                         sha256,
                         content.LongLength);
 
-                    StatusText.Text =
-                        $"Controllo cloud {index + 1}/{transferLogs.Count}: {flightLog.FileName}";
-
-                    var checkResult =
-                        await _flightLogImportService.CheckDjiFlightLogImportAsync(
-                            idToken,
-                            operatorId,
-                            ownerUid,
+                    preparedLogs.Add(
+                        new PreparedFlightLog(
+                            flightLog,
+                            progressEntry,
                             sha256,
-                            content.LongLength,
-                            flightLog.FileName);
+                            content.LongLength));
+                }
+                catch (Exception ex)
+                {
+                    processedCount++;
+                    failedCount++;
+                    progressWindow.MarkFailed(
+                        progressEntry,
+                        ex);
 
-                    if (checkResult.AlreadyImported)
+                    StatusText.Text =
+                        $"Errore su {flightLog.FileName}: {ex.Message}";
+
+                    UpdateTransferStatistics(
+                        uploadedCount,
+                        alreadyImportedCount,
+                        duplicateFlightCount,
+                        reviewRequiredCount,
+                        failedCount,
+                        transferLogs.Count,
+                        processedCount);
+                }
+            }
+
+            var alreadyImportedKeys =
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var failedPreparedKeys =
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var chunk in preparedLogs.Chunk(500))
+            {
+                if (progressWindow.IsStopRequested)
+                {
+                    wasStopped = true;
+                    break;
+                }
+
+                var batchItems =
+                    chunk
+                        .Select(log => new DjiFlightLogImportBatchCheckItem(
+                            log.Sha256,
+                            log.SizeBytes,
+                            log.FlightLog.FileName))
+                        .ToList();
+
+                StatusText.Text =
+                    $"Controllo cloud batch: {batchItems.Count} Flight Log";
+
+                try
+                {
+                    var batchResult =
+                        await RunCloudOperationWithRateLimitPauseAsync(
+                            () => _flightLogImportService.CheckDjiFlightLogImportsAsync(
+                                idToken,
+                                operatorId,
+                                ownerUid,
+                                batchItems),
+                            progressWindow,
+                            null,
+                            "Limite cloud durante il controllo duplicati");
+
+                    foreach (var result in batchResult.Results)
                     {
-                        alreadyImportedCount++;
-                        MarkCloudKnown(flightLog);
-                        progressWindow.MarkAlreadyImported(progressEntry);
-                        UpdateTransferStatistics(
-                            uploadedCount,
-                            alreadyImportedCount,
-                            duplicateFlightCount,
-                            reviewRequiredCount,
-                            failedCount,
-                            transferLogs.Count,
-                            index + 1);
+                        if (!result.AlreadyImported)
+                            continue;
 
-                        continue;
+                        alreadyImportedKeys.Add(
+                            GetBatchResultKey(
+                                result.Sha256,
+                                result.Filename));
+
+                        alreadyImportedKeys.Add(result.Sha256);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    wasStopped = true;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    foreach (var preparedLog in chunk)
+                    {
+                        processedCount++;
+                        failedCount++;
+                        progressWindow.MarkFailed(
+                            preparedLog.Entry,
+                            ex);
+
+                        failedPreparedKeys.Add(
+                            GetBatchResultKey(
+                                preparedLog.Sha256,
+                                preparedLog.FlightLog.FileName));
                     }
 
                     StatusText.Text =
-                        $"Invio a DSC {index + 1}/{transferLogs.Count}: {flightLog.FileName}";
+                        $"Controllo cloud batch non riuscito: {ex.Message}";
+                }
+
+                UpdateTransferStatistics(
+                    uploadedCount,
+                    alreadyImportedCount,
+                    duplicateFlightCount,
+                    reviewRequiredCount,
+                    failedCount,
+                    transferLogs.Count,
+                    processedCount);
+            }
+
+            var logsToUpload =
+                new List<PreparedFlightLog>();
+
+            foreach (var preparedLog in preparedLogs)
+            {
+                if (failedPreparedKeys.Contains(
+                        GetBatchResultKey(
+                            preparedLog.Sha256,
+                            preparedLog.FlightLog.FileName)))
+                {
+                    continue;
+                }
+
+                if (alreadyImportedKeys.Contains(
+                        GetBatchResultKey(
+                            preparedLog.Sha256,
+                            preparedLog.FlightLog.FileName)) ||
+                    alreadyImportedKeys.Contains(preparedLog.Sha256))
+                {
+                    processedCount++;
+                    alreadyImportedCount++;
+                    MarkCloudKnown(preparedLog.FlightLog);
+                    progressWindow.MarkAlreadyImported(preparedLog.Entry);
+
+                    UpdateTransferStatistics(
+                        uploadedCount,
+                        alreadyImportedCount,
+                        duplicateFlightCount,
+                        reviewRequiredCount,
+                        failedCount,
+                        transferLogs.Count,
+                        processedCount);
+
+                    continue;
+                }
+
+                logsToUpload.Add(preparedLog);
+            }
+
+            foreach (var preparedLog in logsToUpload)
+            {
+                if (progressWindow.IsStopRequested)
+                {
+                    wasStopped = true;
+                    break;
+                }
+
+                var flightLog =
+                    preparedLog.FlightLog;
+
+                try
+                {
+                    StatusText.Text =
+                        $"Invio a DSC {preparedLog.Entry.Number}/{transferLogs.Count}: {flightLog.FileName}";
 
                     progressWindow.UpdateEntry(
-                        progressEntry,
+                        preparedLog.Entry,
+                        "In corso",
+                        "Lettura file per upload");
+
+                    var content =
+                        await ReadFlightLogBytesAsync(
+                            _selectedDevice,
+                            flightLog);
+
+                    progressWindow.UpdateEntry(
+                        preparedLog.Entry,
                         "In corso",
                         "Upload verso DSC");
 
                     var importResult =
-                        await _flightLogImportService.ImportDjiFlightLogAsync(
-                            idToken,
-                            operatorId,
-                            ownerUid,
-                            sha256,
-                            content,
-                            flightLog.FileName);
+                        await RunCloudOperationWithRateLimitPauseAsync(
+                            () => _flightLogImportService.ImportDjiFlightLogAsync(
+                                idToken,
+                                operatorId,
+                                ownerUid,
+                                preparedLog.Sha256,
+                                content,
+                                flightLog.FileName),
+                            progressWindow,
+                            preparedLog.Entry,
+                            "Limite cloud durante upload");
 
                     if (!importResult.PersistedFleetRegistry)
                     {
@@ -564,32 +721,40 @@ public partial class MainWindow : Window
                             GetIncompleteImportMessage(importResult));
                     }
 
+                    processedCount++;
+
                     if (importResult.IsDuplicateFlight)
                     {
                         duplicateFlightCount++;
                         MarkCloudKnown(flightLog);
-                        progressWindow.MarkDuplicateFlight(progressEntry);
+                        progressWindow.MarkDuplicateFlight(preparedLog.Entry);
                     }
                     else if (importResult.RequiresReview)
                     {
                         reviewRequiredCount++;
                         MarkCloudKnown(flightLog);
                         progressWindow.MarkRequiresReview(
-                            progressEntry,
+                            preparedLog.Entry,
                             GetReviewMessage(importResult));
                     }
                     else
                     {
                         uploadedCount++;
                         MarkCloudKnown(flightLog);
-                        progressWindow.MarkUploaded(progressEntry);
+                        progressWindow.MarkUploaded(preparedLog.Entry);
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    wasStopped = true;
+                    break;
                 }
                 catch (Exception ex)
                 {
+                    processedCount++;
                     failedCount++;
                     progressWindow.MarkFailed(
-                        progressEntry,
+                        preparedLog.Entry,
                         ex);
 
                     StatusText.Text =
@@ -603,7 +768,7 @@ public partial class MainWindow : Window
                     reviewRequiredCount,
                     failedCount,
                     transferLogs.Count,
-                    index + 1);
+                    processedCount);
 
                 if (progressWindow.IsStopRequested)
                 {
@@ -641,6 +806,77 @@ public partial class MainWindow : Window
         };
 
         UpdateTransferAvailability();
+    }
+
+    private async Task<T> RunCloudOperationWithRateLimitPauseAsync<T>(
+        Func<Task<T>> operation,
+        TransferProgressWindow progressWindow,
+        TransferLogEntry? entry,
+        string pauseDetail)
+    {
+        while (true)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch (DjiFlightLogRateLimitException ex)
+            {
+                var retryAfter =
+                    ex.RetryAfter > TimeSpan.Zero
+                        ? ex.RetryAfter
+                        : TimeSpan.FromMinutes(1);
+
+                var resumeAt =
+                    DateTimeOffset.Now + retryAfter;
+
+                while (true)
+                {
+                    if (progressWindow.IsStopRequested)
+                        throw new OperationCanceledException();
+
+                    var remaining =
+                        resumeAt - DateTimeOffset.Now;
+
+                    if (remaining <= TimeSpan.Zero)
+                        break;
+
+                    var message =
+                        $"{pauseDetail}: ripresa tra {FormatDuration(remaining)}";
+
+                    StatusText.Text = message;
+
+                    if (entry != null)
+                    {
+                        progressWindow.UpdateEntry(
+                            entry,
+                            "In pausa",
+                            message);
+                    }
+
+                    await Task.Delay(
+                        remaining < TimeSpan.FromSeconds(5)
+                            ? remaining
+                            : TimeSpan.FromSeconds(5));
+                }
+            }
+        }
+    }
+
+    private static string FormatDuration(
+        TimeSpan duration)
+    {
+        if (duration.TotalMinutes >= 1)
+            return $"{Math.Ceiling(duration.TotalMinutes)} min";
+
+        return $"{Math.Ceiling(duration.TotalSeconds)} sec";
+    }
+
+    private static string GetBatchResultKey(
+        string sha256,
+        string filename)
+    {
+        return $"{sha256}:{filename}";
     }
 
     private async Task<byte[]> ReadFlightLogBytesAsync(
@@ -819,4 +1055,10 @@ public partial class MainWindow : Window
 
         return $"file:{flightLog.FileName}:{flightLog.Size}:{flightLog.LastModifiedUtc:O}";
     }
+
+    private sealed record PreparedFlightLog(
+        FlightLogFile FlightLog,
+        TransferLogEntry Entry,
+        string Sha256,
+        long SizeBytes);
 }

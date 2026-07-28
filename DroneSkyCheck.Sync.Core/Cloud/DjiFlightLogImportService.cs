@@ -88,6 +88,83 @@ public sealed class DjiFlightLogImportService : IFlightLogImportService
         }
     }
 
+    public async Task<DjiFlightLogImportBatchCheckResult> CheckDjiFlightLogImportsAsync(
+        string idToken,
+        string operatorId,
+        string ownerUid,
+        IReadOnlyList<DjiFlightLogImportBatchCheckItem> items,
+        CancellationToken cancellationToken = default)
+    {
+        if (items.Count == 0)
+            return new DjiFlightLogImportBatchCheckResult([]);
+
+        using var response =
+            await SendWithRateLimitRetryAsync(
+                CreateRequest,
+                cancellationToken);
+
+        var responseBody =
+            await response.Content.ReadAsStringAsync(cancellationToken);
+
+        EnsureSuccessStatusCode(
+            response,
+            responseBody,
+            "Controllo batch duplicati Flight Log non riuscito");
+
+        var checkResponse =
+            JsonSerializer.Deserialize<BatchCheckDjiFlightLogImportResponse>(
+                responseBody,
+                JsonOptions);
+
+        var responseResults =
+            checkResponse?.Results ?? [];
+
+        var results =
+            responseResults
+                .Select((result, index) =>
+                {
+                    var requestItem =
+                        index < items.Count
+                            ? items[index]
+                            : null;
+
+                    return new DjiFlightLogImportBatchCheckResultItem(
+                        string.IsNullOrWhiteSpace(result.Sha256)
+                            ? requestItem?.Sha256 ?? string.Empty
+                            : result.Sha256,
+                        string.IsNullOrWhiteSpace(result.Filename)
+                            ? requestItem?.Filename ?? string.Empty
+                            : result.Filename,
+                        result.AlreadyImported == true);
+                })
+                .ToList();
+
+        return new DjiFlightLogImportBatchCheckResult(results);
+
+        HttpRequestMessage CreateRequest()
+        {
+            var request =
+                new HttpRequestMessage(
+                    HttpMethod.Post,
+                    _options.CheckDjiFlightLogImportsUrl);
+
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", idToken);
+
+            request.Headers.Add("X-DSC-Operator-ID", operatorId);
+            request.Headers.Add("X-DSC-Owner-UID", ownerUid);
+
+            request.Content = JsonContent.Create(
+                new BatchCheckDjiFlightLogImportRequest(
+                    items,
+                    operatorId,
+                    ownerUid),
+                options: JsonOptions);
+
+            return request;
+        }
+    }
+
     public async Task<DjiFlightLogImportResult> ImportDjiFlightLogAsync(
         string idToken,
         string operatorId,
@@ -180,33 +257,14 @@ public sealed class DjiFlightLogImportService : IFlightLogImportService
         Func<HttpRequestMessage> createRequest,
         CancellationToken cancellationToken)
     {
-        for (var attempt = 0; ; attempt++)
-        {
-            await WaitForRequestSlotAsync(cancellationToken);
+        await WaitForRequestSlotAsync(cancellationToken);
 
-            using var request =
-                createRequest();
+        using var request =
+            createRequest();
 
-            var response =
-                await _httpClient.SendAsync(
-                    request,
-                    cancellationToken);
-
-            if (!IsRateLimitResponse(response) ||
-                attempt >= _options.MaxRateLimitRetries)
-            {
-                return response;
-            }
-
-            var retryDelay =
-                GetRateLimitRetryDelay(response, attempt);
-
-            response.Dispose();
-
-            await Task.Delay(
-                retryDelay,
-                cancellationToken);
-        }
+        return await _httpClient.SendAsync(
+            request,
+            cancellationToken);
     }
 
     private async Task WaitForRequestSlotAsync(
@@ -254,12 +312,13 @@ public sealed class DjiFlightLogImportService : IFlightLogImportService
 
     private TimeSpan GetRateLimitRetryDelay(
         HttpResponseMessage response,
+        string responseBody,
         int attempt)
     {
         if (response.Headers.RetryAfter?.Delta is { } delta &&
             delta > TimeSpan.Zero)
         {
-            return LimitRetryDelay(delta);
+            return delta;
         }
 
         if (response.Headers.RetryAfter?.Date is { } date)
@@ -267,7 +326,15 @@ public sealed class DjiFlightLogImportService : IFlightLogImportService
             var delay = date - DateTimeOffset.UtcNow;
 
             if (delay > TimeSpan.Zero)
-                return LimitRetryDelay(delay);
+                return delay;
+        }
+
+        var retryAfterFromBody =
+            GetRetryAfterFromBody(responseBody);
+
+        if (retryAfterFromBody > TimeSpan.Zero)
+        {
+            return retryAfterFromBody;
         }
 
         var multiplier =
@@ -287,13 +354,67 @@ public sealed class DjiFlightLogImportService : IFlightLogImportService
             : _options.RateLimitRetryMaxDelay;
     }
 
-    private static void EnsureSuccessStatusCode(
+    private static TimeSpan GetRetryAfterFromBody(
+        string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+            return TimeSpan.Zero;
+
+        try
+        {
+            using var document =
+                JsonDocument.Parse(responseBody);
+
+            if (!document.RootElement.TryGetProperty(
+                    "retryAfterSeconds",
+                    out var retryAfterSeconds))
+            {
+                return TimeSpan.Zero;
+            }
+
+            if (retryAfterSeconds.ValueKind == JsonValueKind.Number &&
+                retryAfterSeconds.TryGetDouble(out var seconds) &&
+                seconds > 0)
+            {
+                return TimeSpan.FromSeconds(seconds);
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return TimeSpan.Zero;
+    }
+
+    private static string FormatRetryDelay(
+        TimeSpan delay)
+    {
+        if (delay.TotalMinutes >= 1)
+            return $"{Math.Ceiling(delay.TotalMinutes)} min";
+
+        return $"{Math.Ceiling(delay.TotalSeconds)} sec";
+    }
+
+    private void EnsureSuccessStatusCode(
         HttpResponseMessage response,
         string responseBody,
         string message)
     {
         if (response.IsSuccessStatusCode)
             return;
+
+        if (IsRateLimitResponse(response))
+        {
+            var retryAfter =
+                GetRateLimitRetryDelay(
+                    response,
+                    responseBody,
+                    _options.MaxRateLimitRetries);
+
+            throw new DjiFlightLogRateLimitException(
+                $"{message}: limite temporaneo Cloud DSC raggiunto. Ripresa tra {FormatRetryDelay(retryAfter)}.",
+                retryAfter);
+        }
 
         var detail = string.IsNullOrWhiteSpace(responseBody)
             ? response.ReasonPhrase
@@ -306,8 +427,31 @@ public sealed class DjiFlightLogImportService : IFlightLogImportService
     private sealed record CheckDjiFlightLogImportRequest(
         string Sha256);
 
+    private sealed record BatchCheckDjiFlightLogImportRequest(
+        IReadOnlyList<DjiFlightLogImportBatchCheckItem> Items,
+        string OperatorId,
+        string OwnerUid);
+
     private sealed class CheckDjiFlightLogImportResponse
     {
+        [JsonPropertyName("alreadyImported")]
+        public bool? AlreadyImported { get; init; }
+    }
+
+    private sealed class BatchCheckDjiFlightLogImportResponse
+    {
+        [JsonPropertyName("results")]
+        public IReadOnlyList<BatchCheckDjiFlightLogImportResultItem> Results { get; init; } = [];
+    }
+
+    private sealed class BatchCheckDjiFlightLogImportResultItem
+    {
+        [JsonPropertyName("sha256")]
+        public string Sha256 { get; init; } = string.Empty;
+
+        [JsonPropertyName("filename")]
+        public string Filename { get; init; } = string.Empty;
+
         [JsonPropertyName("alreadyImported")]
         public bool? AlreadyImported { get; init; }
     }
